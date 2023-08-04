@@ -6,6 +6,7 @@
 #include <pwd.h>
 #include <time.h>
 #include <string.h>
+#include <sys/dir.h>
 
 char *options;
 char *fileList;
@@ -15,112 +16,49 @@ void *printFilesLongFormat(char *locationOf, int index);
 void *noArgumentsls();
 void *checkFlag(char *argv);
 void *emptyls();
+void *emptylsAlpha(char *locationOf);
 
 int flags[] = {0, 0, 0}; // flags will be like : l i R
 
 int main(int argc, char *argv[])
 {
 
-    while (1)
-    {
-
-        printFilesLongFormat(argv[2], 0);
-
-        exit(0);
-    }
-
-    int i = 2;
-    int lineArgumentN = 0;
-
     if (argc < 2) // no arguments
     {
-        emptyls(".");
+        emptylsAlpha(".");
     }
     else
     { // more arguments supplied
+        int i = 1;
+        int lineArgumentN = 0;
 
-        while (lineArgumentN == 0 && i <= argc) // checking if every argument is a flag
+        while (lineArgumentN == 0 && i < argc) // checking if every argument is a flag
         {
-            if (argv[i - 1][0] == '-')
+            if (argv[i][0] == '-')
             {
-                checkFlag(argv[i - 1]);
-                printf("i : %d", i);
+                checkFlag(argv[i]);
                 i++;
             }
             else
             {
                 lineArgumentN = 1;
             }
-        }
+        } // checking if every argument is a flag
 
-        // after all flags have been processed
-        i = i - 1;
-        printf("\n i: %d \n", i);
-        printf("arguments: %d \n", argc);
-
-        // need to process path arguments
-        if (i < argc)
+        while (i < argc)
         {
-            while (i < argc)
-            {
-
-                printf("fat \n");
-                if (flags[0] == 1 && flags[1] == 1)
-                {
-
-                    printf("my argument: %s \n", argv[i]);
-                    printFilesLongFormat(argv[i], 1);
-                }
-                else
-                {
-
-                    int zeroFlags = 1;
-
-                    if (flags[0] == 1)
-                    {
-                        // l
-                        printFilesLongFormat(argv[i], 0);
-                        zeroFlags = 0;
-                    }
-                    else if (flags[1] == 1)
-                    {
-                        // i
-                        printIndexNumber(argv[i]);
-                        zeroFlags = 0;
-                    }
-
-                    if (flags[2] == 1)
-                    {
-                        // R
-                        zeroFlags = 0;
-                    }
-
-                    if (zeroFlags != 1)
-                    { // no flags at all provided
-
-                        emptyls(argv[i]);
-                    }
-                }
-
-                i++;
-            }
-        }
-        else
-        {
-            int zeroFlags = 1;
-
             if (flags[0] == 1 && flags[1] == 1)
             {
-                printFilesLongFormat(".", 1);
-                printf("are we here");
+                printFilesLongFormat(argv[i], 1);
             }
             else
             {
+                int zeroFlags = 1;
 
                 if (flags[0] == 1)
                 {
                     // l
-                    printFilesLongFormat(".", 0);
+                    printFilesLongFormat(argv[i], 0);
                     zeroFlags = 0;
                 }
                 else if (flags[1] == 1)
@@ -136,21 +74,199 @@ int main(int argc, char *argv[])
                     zeroFlags = 0;
                 }
 
-                if (zeroFlags != 1)
+                if (zeroFlags != 0)
                 { // no flags at all provided
 
                     emptyls(argv[i]);
                 }
             }
+
+            i++;
+        } // while there are some arguments left
+    }     // more arguments supplied
+}
+
+void *checkFlag(char *argv)
+{
+
+    int c = strlen(argv);
+    for (int i = 1; i < c; i++)
+    {
+        if (argv[i] == 'l')
+        {
+            flags[0] = 1;
         }
-
-        // combined i and l
-
-        //
+        else if (argv[i] == 'i')
+        {
+            flags[1] = 1;
+        }
+        else if (argv[i] == 'R')
+        {
+            flags[2] = 1;
+        }
     }
 
-    printf("\n");
+    return NULL;
 }
+
+void *printFilesLongFormat(char *locationOf, int index)
+{
+
+    struct dirent *d;
+    DIR *dp = opendir(locationOf);
+    // struct stat myStat;
+
+    if (dp)
+    {
+
+        while ((d = readdir(dp)) != NULL)
+
+        // for every file here
+        {
+
+            if (d->d_name[0] != '.')
+            {
+
+                struct dirent *dir;
+                DIR *dpInside = opendir(d->d_name);
+                struct stat myStatInside;
+
+                char path[100];
+                strcpy(path, locationOf);
+                strcat(path, "/");
+                strcat(path, d->d_name);
+
+                stat(path, &myStatInside);
+
+                if (index == 1)
+                {
+                    printf("%ld ", myStatInside.st_ino);
+                }
+
+                if ((S_ISDIR(myStatInside.st_mode)))
+                {
+                    printf("d");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IRUSR)
+                {
+                    printf("r");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IWUSR)
+                {
+                    printf("w");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IXUSR)
+                {
+                    printf("x");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IRGRP)
+                {
+                    printf("r");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IWGRP)
+                {
+                    printf("w");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IXGRP)
+                {
+                    printf("x");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IROTH)
+                {
+                    printf("r");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IWOTH)
+                {
+                    printf("w");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                if (myStatInside.st_mode & S_IXOTH)
+                {
+                    printf("x");
+                }
+                else
+                {
+                    printf("-");
+                }
+
+                printf(" %ld", myStatInside.st_nlink);
+
+                int uid = myStatInside.st_uid;
+                struct passwd *pwd;
+                pwd = getpwuid(uid);
+                printf(" %s", pwd->pw_name);
+
+                int gid = myStatInside.st_gid;
+                struct group *grp;
+                grp = getgrgid(gid);
+                printf(" %s", grp->gr_name);
+
+                printf(" %ld", myStatInside.st_size);
+
+                // size_t dateOfLastMod;
+                char date[50];
+                // dateOfLastMod =
+                strftime(date, 20, " %b %d %H:%M", localtime(&(myStatInside.st_mtime)));
+                printf(" %s", date);
+
+                printf(" %s", d->d_name);
+
+                putchar('\n');
+            }
+            // int gid = myStatInside.st_gid;
+            // struct group *grp;
+            // grp = getgrgid(gid);
+            // printf(" %s", grp->gr_name);
+        }
+    }
+
+    return NULL;
+}
+
 void *emptyls(char *locationOf)
 {
 
@@ -165,42 +281,48 @@ void *emptyls(char *locationOf)
         {
             if (d->d_name[0] != '.')
             {
-                stat(d->d_name, &myStat);
-                printf("%s ", d->d_name);
+
+                struct dirent *dir;
+                DIR *dpInside = opendir(d->d_name);
+                struct stat myStatInside;
+
+                printf(" %s", d->d_name);
+
+                putchar('\n');
             }
         }
         closedir(dp);
     }
 
+    putchar('\n');
+
     return NULL;
 }
 
-void *checkFlag(char *argv)
+void *emptylsAlpha(char *locationOf)
 {
-    printf("%s \n", argv);
 
-    int c = strlen(argv);
-    for (int i = 1; i < c; i++)
+    struct dirent **namelist;
+    int n;
+    int i = 0;
+
+    n = scandir(locationOf, &namelist, NULL, alphasort);
+    if (n < 0)
     {
-        if (argv[i] == 'l')
+        printf("Error");
+    }
+    else
+    {
+        while (i < n)
         {
-            flags[0] = 1;
-            printf("l detected \n");
-        }
-        else if (argv[i] == 'i')
-        {
-            flags[1] = 1;
-            printf("i detected \n");
-        }
-        else if (argv[i] == 'R')
-        {
-            flags[2] = 1;
-            printf("R detected \n");
-        }
+            if (namelist[i]->d_name[0] != '.')
+            {
 
-        // printf("here \n");
+                printf("%s\n", namelist[i]->d_name);             
+            }
 
-        printf("integers i %d c %d", i, c);
+             i++;
+        }
     }
 
     return NULL;
@@ -209,218 +331,36 @@ void *checkFlag(char *argv)
 void *printIndexNumber(char *locationOf)
 {
 
-    printf("In index print function, %s", locationOf);
-
     struct dirent *d;
     DIR *dp = opendir(locationOf);
-    struct stat myStat;
-
-    if (dp)
-    {
-
-        while ((d = readdir(dp)) != NULL)
-        {
-            if (d->d_name[0] != '.')
-            {
-                stat(d->d_name, &myStat);
-                printf("%s ", d->d_name);
-                printf("%ld\n", myStat.st_ino);
-            }
-        }
-        closedir(dp);
-    }
-
-    return NULL;
-}
-
-void *printFilesLongFormat(char *locationOf, int index)
-{
-
-    printf("hello from long format: %s", locationOf);
-
-    struct dirent *d;
-    DIR *dp = opendir(locationOf);
-    struct stat myStat;
-
-    if (dp)
-    {
-
-        while ((d = readdir(dp)) != NULL)
-
-        //for every file here
-        {
-            printf("\n %s", d->d_name);
-
-            if (d->d_name[0] != '.')
-            {
-
-                stat("\\foo\\secretheader.h", &myStat);
-                int gid = myStat.st_gid;
-                struct group *grp;
-                grp = getgrgid(gid);
-                printf(" %s", grp->gr_name);
-            }
-        }
-    }
-
-    // struct dirent *d;
-    // DIR *dp = opendir(locationOf);
     // struct stat myStat;
 
-    // if (dp)
-    // {
+    if (dp)
+    {
 
-    //     while ((d = readdir(dp)) != NULL)
-    //     {
+        while ((d = readdir(dp)) != NULL)
 
-    //         printf("%s", d->d_name);
-    //         if (d->d_name[0] != '.')
-    //         {
-    //             stat(d->d_name, &myStat);
+        // for every file here
+        {
 
-    //             if (index == 1)
-    //             {
-    //                 printf("%ld ", myStat.st_ino);
-    //             }
+            if (d->d_name[0] != '.')
+            {
 
-    //             // printf("%d", myStat.st_mode);
+                struct dirent *dir;
+                DIR *dpInside = opendir(d->d_name);
+                struct stat myStatInside;
 
-    //             if ((S_ISDIR(myStat.st_mode)))
-    //             {
-    //                 printf("d");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-    //             // owner permission
+                char path[100];
+                strcpy(path, locationOf);
+                strcat(path, "/");
+                strcat(path, d->d_name);
 
-    //             if (myStat.st_mode & S_IRUSR)
-    //             {
-    //                 printf("r");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
+                stat(path, &myStatInside);
 
-    //             if (myStat.st_mode & S_IWUSR)
-    //             {
-    //                 printf("w");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             if (myStat.st_mode & S_IXUSR)
-    //             {
-    //                 printf("x");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             // putchar('\n');
-
-    //             // group permission
-
-    //             if (myStat.st_mode & S_IRGRP)
-    //             {
-    //                 printf("r");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             if (myStat.st_mode & S_IWGRP)
-    //             {
-    //                 printf("w");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             if (myStat.st_mode & S_IXGRP)
-    //             {
-    //                 printf("x");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             // putchar('\n');
-
-    //             // others permission
-
-    //             if (myStat.st_mode & S_IROTH)
-    //             {
-    //                 printf("r");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             if (myStat.st_mode & S_IWOTH)
-    //             {
-    //                 printf("w");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             if (myStat.st_mode & S_IXOTH)
-    //             {
-    //                 printf("x");
-    //             }
-    //             else
-    //             {
-    //                 printf("-");
-    //             }
-
-    //             printf(" %ld", myStat.st_nlink);
-
-    //             int uid = myStat.st_uid;
-    //             struct passwd *pwd;
-    //             pwd = getpwuid(uid);
-    //             printf(" %s", pwd->pw_name);
-
-    //             int gid = myStat.st_gid;
-    //             struct group *grp;
-    //             grp = getgrgid(gid);
-    //             printf(" %s", grp->gr_name);
-
-    //             printf(" %ld", myStat.st_size);
-
-    //             // size_t dateOfLastMod;
-    //             char date[50];
-    //             // dateOfLastMod =
-    //             strftime(date, 20, " %b %d %H:%M", localtime(&(myStat.st_mtime)));
-    //             printf(" %s", date);
-
-    //             printf(" %s", d->d_name);
-
-    //             putchar('\n');
-    //         }
-    //     }
-    //     closedir(dp);
-    // }
-    // else
-    // {
-    //     printf("couldnt open directory");
-    // }
-
-    return NULL;
-}
-
-void *recursiveListing(char *locationOf)
-{
+                printf("%ld ", myStatInside.st_ino);
+            }
+        }
+    }
 
     return NULL;
 }
