@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2) // no arguments
     {
-        emptylsAlpha(".");
+        emptyls(".");
     }
     else
     { // more arguments supplied
@@ -45,11 +45,53 @@ int main(int argc, char *argv[])
             }
         } // checking if every argument is a flag
 
-        while (i < argc)
+        if (i < argc) // if we have additional path arguments
         {
+            while (i < argc)
+            {
+                if (flags[0] == 1 && flags[1] == 1)
+                {
+                    printFilesLongFormat(argv[i], 1);
+                }
+                else
+                {
+                    int zeroFlags = 1;
+
+                    if (flags[0] == 1)
+                    {
+                        // l
+                        printFilesLongFormat(argv[i], 0);
+                        zeroFlags = 0;
+                    }
+                    else if (flags[1] == 1)
+                    {
+                        // i
+                        printIndexNumber(argv[i]);
+                        zeroFlags = 0;
+                    }
+
+                    if (flags[2] == 1)
+                    {
+                        // R
+                        zeroFlags = 0;
+                    }
+
+                    if (zeroFlags != 0)
+                    { // no flags at all provided
+
+                        emptyls(argv[i]);
+                    }
+                }
+
+                i++;
+            } // while there are some arguments left
+        }
+        else // if we only have flags with no path specified
+        {
+
             if (flags[0] == 1 && flags[1] == 1)
             {
-                printFilesLongFormat(argv[i], 1);
+                printFilesLongFormat(".", 1);
             }
             else
             {
@@ -58,13 +100,13 @@ int main(int argc, char *argv[])
                 if (flags[0] == 1)
                 {
                     // l
-                    printFilesLongFormat(argv[i], 0);
+                    printFilesLongFormat(".", 0);
                     zeroFlags = 0;
                 }
                 else if (flags[1] == 1)
                 {
                     // i
-                    printIndexNumber(argv[i]);
+                    printIndexNumber(".");
                     zeroFlags = 0;
                 }
 
@@ -77,13 +119,11 @@ int main(int argc, char *argv[])
                 if (zeroFlags != 0)
                 { // no flags at all provided
 
-                    emptyls(argv[i]);
+                    emptyls(".");
                 }
             }
-
-            i++;
-        } // while there are some arguments left
-    }     // more arguments supplied
+        }
+    }
 }
 
 void *checkFlag(char *argv)
@@ -112,29 +152,29 @@ void *checkFlag(char *argv)
 void *printFilesLongFormat(char *locationOf, int index)
 {
 
-    struct dirent *d;
-    DIR *dp = opendir(locationOf);
-    // struct stat myStat;
+    struct dirent **namelist;
+    int n;
+    int i = 0;
 
-    if (dp)
+    n = scandir(locationOf, &namelist, NULL, alphasort);
+    if (n < 0)
     {
-
-        while ((d = readdir(dp)) != NULL)
-
-        // for every file here
+        printf("No such file or directory");
+    }
+    else
+    {
+        while (i < n)
         {
-
-            if (d->d_name[0] != '.')
+            if (namelist[i]->d_name[0] != '.')
             {
 
                 struct dirent *dir;
-                DIR *dpInside = opendir(d->d_name);
                 struct stat myStatInside;
 
                 char path[100];
                 strcpy(path, locationOf);
                 strcat(path, "/");
-                strcat(path, d->d_name);
+                strcat(path, namelist[i]->d_name);
 
                 stat(path, &myStatInside);
 
@@ -253,53 +293,22 @@ void *printFilesLongFormat(char *locationOf, int index)
                 strftime(date, 20, " %b %d %H:%M", localtime(&(myStatInside.st_mtime)));
                 printf(" %s", date);
 
-                printf(" %s", d->d_name);
+                printf(" %s", namelist[i]->d_name);
 
                 putchar('\n');
+
             }
-            // int gid = myStatInside.st_gid;
-            // struct group *grp;
-            // grp = getgrgid(gid);
-            // printf(" %s", grp->gr_name);
+
+            free(namelist[i]);
+            i++;
         }
+        free(namelist);
     }
 
     return NULL;
 }
 
 void *emptyls(char *locationOf)
-{
-
-    struct dirent *d;
-    DIR *dp = opendir(locationOf);
-    struct stat myStat;
-
-    if (dp)
-    {
-
-        while ((d = readdir(dp)) != NULL)
-        {
-            if (d->d_name[0] != '.')
-            {
-
-                struct dirent *dir;
-                DIR *dpInside = opendir(d->d_name);
-                struct stat myStatInside;
-
-                printf(" %s", d->d_name);
-
-                putchar('\n');
-            }
-        }
-        closedir(dp);
-    }
-
-    putchar('\n');
-
-    return NULL;
-}
-
-void *emptylsAlpha(char *locationOf)
 {
 
     struct dirent **namelist;
@@ -309,7 +318,7 @@ void *emptylsAlpha(char *locationOf)
     n = scandir(locationOf, &namelist, NULL, alphasort);
     if (n < 0)
     {
-        printf("Error");
+        printf("No such file or directory");
     }
     else
     {
@@ -318,11 +327,13 @@ void *emptylsAlpha(char *locationOf)
             if (namelist[i]->d_name[0] != '.')
             {
 
-                printf("%s\n", namelist[i]->d_name);             
+                printf("%s\n", namelist[i]->d_name);
             }
 
-             i++;
+            free(namelist[i]);
+            i++;
         }
+        free(namelist);
     }
 
     return NULL;
@@ -331,35 +342,40 @@ void *emptylsAlpha(char *locationOf)
 void *printIndexNumber(char *locationOf)
 {
 
-    struct dirent *d;
-    DIR *dp = opendir(locationOf);
-    // struct stat myStat;
+    struct dirent **namelist;
+    int n;
+    int i = 0;
 
-    if (dp)
+    n = scandir(locationOf, &namelist, NULL, alphasort);
+    if (n < 0)
     {
-
-        while ((d = readdir(dp)) != NULL)
-
-        // for every file here
+        printf("No such file or directory");
+    }
+    else
+    {
+        while (i < n)
         {
-
-            if (d->d_name[0] != '.')
+            if (namelist[i]->d_name[0] != '.')
             {
 
                 struct dirent *dir;
-                DIR *dpInside = opendir(d->d_name);
+                // DIR *dpInside = opendir(namelist[i]->d_name);
                 struct stat myStatInside;
 
                 char path[100];
                 strcpy(path, locationOf);
                 strcat(path, "/");
-                strcat(path, d->d_name);
+                strcat(path, namelist[i]->d_name);
 
                 stat(path, &myStatInside);
 
                 printf("%ld ", myStatInside.st_ino);
             }
+
+            free(namelist[i]);
+            i++;
         }
+        free(namelist);
     }
 
     return NULL;
